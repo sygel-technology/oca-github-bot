@@ -2,14 +2,19 @@
 # Distributed under the MIT License (http://opensource.org/licenses/MIT).
 
 import re
+import logging
 
 from .tasks import merge_bot, migration_issue_bot, rebase_bot
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 BOT_COMMAND_RE = re.compile(
     # Do not start with > (Github comment), not consuming it
     r"^(?=[^>])"
-    # Anything before /ocabot, at least one whitspace after
-    r".*/ocabot\s+"
+    # Anything before /sygelbot, at least one whitespace after
+    r".*/sygelbot\s+"
     # command group: any word is ok
     r"(?P<command>\w+)"
     # options group: spaces and words, all the times you want (0 is ok too)
@@ -20,6 +25,9 @@ BOT_COMMAND_RE = re.compile(
     re.MULTILINE,
 )
 
+# Users authorized for using commands
+AUTHORIZED_USERS = ["manuel-florido", "HaraldPanten", "ValentinVinagre"]
+MENTIONED_USERS = ["manuel-florido", "ValentinVinagre"]
 
 class CommandError(Exception):
     pass
@@ -49,6 +57,16 @@ class RequiredOptionError(OptionsError):
         )
 
 
+class UnauthorizedUserError(CommandError):
+    def __init__(self, username):
+        authorized_mentions = " ".join([f"@{user}" for user in MENTIONED_USERS])
+        message = (
+            f"No tiene permisos para ejecutar los comandos del bot, póngase en contacto con {authorized_mentions}."
+        )
+        logger.warning(f"Unauthorized access attempt by {username}")
+        super().__init__(message)
+
+
 class BotCommand:
     def __init__(self, name, options):
         self.name = name
@@ -71,7 +89,8 @@ class BotCommand:
 
     def delay(self, org, repo, pr, username, dry_run=False):
         """Run the command on a given pull request on behalf of a GitHub user"""
-        raise NotImplementedError()
+        if username not in AUTHORIZED_USERS:
+            raise UnauthorizedUserError(username)
 
 
 class BotCommandMerge(BotCommand):
@@ -89,6 +108,8 @@ class BotCommandMerge(BotCommand):
             raise InvalidOptionsError(self.name, options)
 
     def delay(self, org, repo, pr, username, dry_run=False):
+        if username not in AUTHORIZED_USERS:
+            raise UnauthorizedUserError(username)
         merge_bot.merge_bot_start.delay(
             org, repo, pr, username, self.bumpversion_mode, dry_run=False
         )
@@ -101,6 +122,8 @@ class BotCommandRebase(BotCommand):
         raise InvalidOptionsError(self.name, options)
 
     def delay(self, org, repo, pr, username, dry_run=False):
+        if username not in AUTHORIZED_USERS:
+            raise UnauthorizedUserError(username)
         rebase_bot.rebase_bot_start.delay(org, repo, pr, username, dry_run=False)
 
 
@@ -114,6 +137,8 @@ class BotCommandMigrationIssue(BotCommand):
             raise InvalidOptionsError(self.name, options)
 
     def delay(self, org, repo, pr, username, dry_run=False):
+        if username not in AUTHORIZED_USERS:
+            raise UnauthorizedUserError(username)
         migration_issue_bot.migration_issue_start.delay(
             org, repo, pr, username, module=self.module, dry_run=dry_run
         )
