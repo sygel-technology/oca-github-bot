@@ -81,48 +81,51 @@ class TwineDistPublisher:
         self._username = username
         self._password = password
 
-    def publish(self, dist_dir: str, dry_run: bool) -> None:
-        for filename in os.listdir(dist_dir):
-            if exists_on_index(self._index_url, filename):
-                _logger.info(
-                    f"Not uploading {filename} that already exists "
-                    f"on {self._repository_url}."
+
+def publish(self, dist_dir: str, dry_run: bool) -> None:
+    for filename in os.listdir(dist_dir):
+        if filename.startswith("odoo_addon_mail_show_follower-"):
+            _logger.info(f"Skipping {filename} due to known PyPI conflict.")
+            continue
+        if exists_on_index(self._index_url, filename):
+            _logger.info(
+                f"Not uploading {filename} that already exists "
+                f"on {self._repository_url}."
+            )
+            continue
+        _logger.info(f"Uploading {filename} to {self._repository_url}")
+        cmd = [
+            "twine",
+            "upload",
+            "--disable-progress-bar",
+            "--non-interactive",
+            "--repository-url",
+            self._repository_url,
+            "-u",
+            self._username,
+            filename,
+        ]
+        if dry_run:
+            _logger.info("DRY-RUN" + " ".join(cmd))
+        else:
+            _logger.info(" ".join(cmd))
+            try:
+                check_call(
+                    cmd,
+                    cwd=dist_dir,
+                    env=dict(os.environ, TWINE_PASSWORD=self._password),
                 )
-                continue
-            _logger.info(f"Uploading {filename} to {self._repository_url}")
-            cmd = [
-                "twine",
-                "upload",
-                "--disable-progress-bar",
-                "--non-interactive",
-                "--repository-url",
-                self._repository_url,
-                "-u",
-                self._username,
-                filename,
-            ]
-            if dry_run:
-                _logger.info("DRY-RUN" + " ".join(cmd))
-            else:
-                _logger.info(" ".join(cmd))
-                try:
-                    check_call(
-                        cmd,
-                        cwd=dist_dir,
-                        env=dict(os.environ, TWINE_PASSWORD=self._password),
+            except CalledProcessError as e:
+                if (
+                    "File already exists" in e.output
+                    or "This filename has already been used" in e.output
+                ):
+                    _logger.warning(
+                        f"Could not upload {filename} that already exists "
+                        f"on {self._repository_url}."
                     )
-                except CalledProcessError as e:
-                    if (
-                        "File already exists" in e.output
-                        or "This filename has already been used" in e.output
-                    ):
-                        # in case exist_on_index() received an outdated index page
-                        _logger.warning(
-                            f"Could not upload {filename} that already exists "
-                            f"on {self._repository_url}."
-                        )
-                    else:
-                        raise
+                else:
+                    raise
 
 
 class RsyncDistPublisher(DistPublisher):

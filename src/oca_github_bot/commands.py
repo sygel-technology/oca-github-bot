@@ -1,8 +1,8 @@
 # Copyright (c) ACSONE SA/NV 2019
 # Distributed under the MIT License (http://opensource.org/licenses/MIT).
 
-import re
 import logging
+import re
 
 from .tasks import merge_bot, migration_issue_bot, rebase_bot
 
@@ -28,6 +28,7 @@ BOT_COMMAND_RE = re.compile(
 # Users authorized for using commands
 AUTHORIZED_USERS = ["manuel-florido", "HaraldPanten", "ValentinVinagre"]
 MENTIONED_USERS = ["manuel-florido", "ValentinVinagre"]
+
 
 class CommandError(Exception):
     pass
@@ -60,9 +61,7 @@ class RequiredOptionError(OptionsError):
 class UnauthorizedUserError(CommandError):
     def __init__(self, username):
         authorized_mentions = " ".join([f"@{user}" for user in MENTIONED_USERS])
-        message = (
-            f"No tiene permisos para ejecutar los comandos del bot, póngase en contacto con {authorized_mentions}."
-        )
+        message = f"No tiene permisos para ejecutar los comandos del bot, póngase en contacto con {authorized_mentions}."
         logger.warning(f"Unauthorized access attempt by {username}")
         super().__init__(message)
 
