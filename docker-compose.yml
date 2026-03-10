@@ -18,6 +18,7 @@ services:
     volumes:
       - ./data/cache:/app/run/.cache
       - ./data/simple-index:/app/run/simple-index
+      - ./data/extra_args:/app/run/extra_args
     restart: unless-stopped
     command: python -m oca_github_bot
     depends_on:

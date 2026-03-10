@@ -69,7 +69,7 @@ def _setuptools_odoo_make_default(org, repo, branch, cwd):
         "--commit",
     ]
     check_call(
-        make_default_setup_cmd, cwd=cwd, extra_cmd_args=GEN_ADDON_ICON_EXTRA_ARGS
+        make_default_setup_cmd, cwd=cwd
     )
 
 
